@@ -1,0 +1,6 @@
+ Test Accounts:
+Admin: admin@test.com / password123
+Lecturer 1: lecturer@test.com / password123
+Lecturer 2: lecturer2@test.com / password123
+Student 1: student@test.com / password123
+Student 2: student2@test.com / password123

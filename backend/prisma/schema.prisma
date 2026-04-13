@@ -1,0 +1,321 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  LECTURER
+  STUDENT
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  DEACTIVATED
+}
+
+enum CourseType {
+  SELECTIVE
+  COMPULSORY
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  DROPPED
+}
+
+enum AssignmentType {
+  ASSIGNMENT
+  PROJECT
+}
+
+enum NotificationType {
+  NEW_ASSIGNMENT
+  ASSIGNMENT_CREATED
+  MATERIAL_UPLOADED
+  DEADLINE_APPROACHING
+  GRADE_RELEASED
+  NEW_MESSAGE
+  NEW_SUBMISSION
+}
+
+model User {
+  id           String      @id @default(uuid())
+  role         UserRole
+  name         String
+  email        String      @unique
+  passwordHash String?     // Optional - null for social-only users
+  avatarUrl    String?     // Profile picture URL
+  status       UserStatus  @default(ACTIVE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  lecturerProfile LecturerProfile?
+  studentProfile  StudentProfile?
+  refreshTokens   RefreshToken[]
+  notifications   Notification[]
+  sentMessages    Message[]
+  courseMessages  CourseMessage[]
+  socialAccounts  SocialAccount[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model LecturerProfile {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  photoUrl   String?
+  department String?
+  bio        String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courses           Course[]
+  assignments       Assignment[]
+  grades            Grade[]
+  messageThreads    MessageThread[]
+}
+
+model StudentProfile {
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  matricNo   String   @unique
+  level      String?
+  department String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments    Enrollment[]
+  submissions    Submission[]
+  messageThreads MessageThread[]
+
+  @@index([matricNo])
+}
+
+model Course {
+  id          String     @id @default(uuid())
+  lecturerId  String
+  title       String
+  code        String     @unique
+  description String?
+  semester    String
+  type        CourseType
+  joinCode    String     @unique
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  lecturer       LecturerProfile @relation(fields: [lecturerId], references: [id], onDelete: Cascade)
+  enrollments    Enrollment[]
+  materials      Material[]
+  assignments    Assignment[]
+  messageThreads MessageThread[]
+  courseMessages CourseMessage[]
+
+  @@index([lecturerId])
+  @@index([joinCode])
+  @@index([code])
+}
+
+model Enrollment {
+  id         String           @id @default(uuid())
+  courseId   String
+  studentId  String
+  status     EnrollmentStatus @default(ACTIVE)
+  enrolledAt DateTime         @default(now())
+  droppedAt  DateTime?
+  updatedAt  DateTime         @updatedAt
+
+  course  Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  student StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, studentId])
+  @@index([courseId])
+  @@index([studentId])
+  @@index([status])
+}
+
+model Material {
+  id         String   @id @default(uuid())
+  courseId   String
+  uploaderId String
+  title      String
+  filePath   String
+  mimeType   String
+  fileSize   Int
+  uploadedAt DateTime @default(now())
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+  @@index([uploaderId])
+}
+
+model Assignment {
+  id             String         @id @default(uuid())
+  courseId       String
+  lecturerId     String
+  title          String
+  description    String
+  dueDate        DateTime
+  type           AssignmentType
+  attachmentPath String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  course      Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lecturer    LecturerProfile  @relation(fields: [lecturerId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+
+  @@index([courseId])
+  @@index([lecturerId])
+  @@index([dueDate])
+}
+
+model Submission {
+  id            String   @id @default(uuid())
+  assignmentId  String
+  studentId     String
+  versionNumber Int
+  filePath      String
+  note          String?
+  submittedAt   DateTime @default(now())
+  isActive      Boolean  @default(true)
+  isLate        Boolean  @default(false)
+
+  assignment Assignment     @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student    StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  grade      Grade?
+
+  @@index([assignmentId])
+  @@index([studentId])
+  @@index([isActive])
+}
+
+model Grade {
+  id               String   @id @default(uuid())
+  submissionId     String   @unique
+  lecturerId       String
+  score            Float
+  feedbackText     String?
+  feedbackFilePath String?
+  gradedAt         DateTime @default(now())
+
+  submission Submission      @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  lecturer   LecturerProfile @relation(fields: [lecturerId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+  @@index([lecturerId])
+}
+
+model MessageThread {
+  id         String   @id @default(uuid())
+  courseId   String
+  lecturerId String
+  studentId  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  course   Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lecturer LecturerProfile @relation(fields: [lecturerId], references: [id], onDelete: Cascade)
+  student  StudentProfile  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@unique([courseId, lecturerId, studentId])
+  @@index([lecturerId])
+  @@index([studentId])
+}
+
+model Message {
+  id          String    @id @default(uuid())
+  threadId    String
+  senderId    String
+  body        String
+  createdAt   DateTime  @default(now())
+  deliveredAt DateTime?
+  seenAt      DateTime?
+
+  thread MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  sender User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model CourseMessage {
+  id        String   @id @default(uuid())
+  courseId  String
+  senderId  String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  sender User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+enum SocialProvider {
+  GOOGLE
+}
+
+model SocialAccount {
+  id           String         @id @default(uuid())
+  userId       String
+  provider     SocialProvider
+  providerId   String         // Unique ID from the provider
+  email        String?
+  name         String?
+  avatarUrl    String?
+  accessToken  String?        @db.Text
+  refreshToken String?        @db.Text
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+  @@index([provider])
+}
