@@ -130,7 +130,7 @@ const SocialSignup = () => {
                   <img
                     src={socialData.avatarUrl}
                     alt="Profile"
-                    className="w-12 h-12 rounded-full"
+                    referrerPolicy="no-referrer" className="w-12 h-12 rounded-full"
                   />
                 )}
                 <div>

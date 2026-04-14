@@ -41,7 +41,9 @@ import AdminDashboard from './pages/admin/Dashboard';
 import UserManagement from './pages/admin/UserManagement';
 import CourseOversight from './pages/admin/CourseOversight';
 
-import Navbar from './components/Navbar';
+import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
+import { ToastProvider } from './components/Toast';
 
 function App() {
   const { loadUser } = useAuthStore();
@@ -51,6 +53,7 @@ function App() {
   }, [loadUser]);
 
   return (
+    <ToastProvider>
     <BrowserRouter>
       <Routes>
         {/* Public Routes */}
@@ -274,8 +277,26 @@ function App() {
             </ProtectedRoute>
           }
         />
+        {/* Profile & Settings - All roles */}
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute allowedRoles={['STUDENT', 'LECTURER', 'ADMIN']}>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute allowedRoles={['STUDENT', 'LECTURER', 'ADMIN']}>
+              <SettingsPage />
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
+    </ToastProvider>
   );
 }
 

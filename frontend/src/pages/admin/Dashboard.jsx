@@ -300,7 +300,7 @@ const AdminDashboard = () => {
                         <td className="py-4 px-4">
                           <div className="flex items-center space-x-3">
                             {user.avatarUrl ? (
-                              <img src={user.avatarUrl} alt={user.name} className="w-10 h-10 rounded-full" />
+                              <img src={user.avatarUrl} alt={user.name} referrerPolicy="no-referrer" className="w-10 h-10 rounded-full" />
                             ) : (
                               <div className={`w-10 h-10 bg-gradient-to-br ${
                                 user.role === 'ADMIN' ? 'from-purple-400 to-pink-400' :

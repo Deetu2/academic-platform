@@ -237,7 +237,7 @@ const UserManagement = () => {
                             <img
                               src={user.avatarUrl}
                               alt={user.name}
-                              className="w-10 h-10 rounded-full"
+                              referrerPolicy="no-referrer" className="w-10 h-10 rounded-full"
                             />
                           ) : (
                             <div className={`w-10 h-10 bg-gradient-to-br ${
